@@ -24,52 +24,63 @@ app.get("/", (req, res) => {
 // smart - deals;
 // 2wcjFQhXHOtpycgB
 
- const smartDeals = client.db("Smart-Deals");
- const productsCollection = smartDeals.collection("products");
+const smartDeals = client.db("Smart-Deals");
+const productsCollection = smartDeals.collection("products");
+const bidsCollection = smartDeals.collection('bids');
 async function run() {
-    try {
-        await client.connect();
+  try {
+    await client.connect();
 
-       
-        //all apis will be here for sometimes;
+      //all apis will be here for sometimes;
+      //bids api;
 
-        //products api;
-        app.get('/products', async (req, res) => {
-            const cursor = productsCollection.find()
-            const result = await cursor.toArray();
-            res.send(result)
+      app.post('/bids', async (req, res) => {
+          const newBids = req.body;
+          const result = await bidsCollection.insertOne(newBids);
+          res.send(result)
+      })
+      app.get('/bids', async (req, res) => {
+          const cursor = bidsCollection.find();
+          const result = await cursor.toArray();
+          res.send(result)
         })
-        app.get('/products/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = {_id: new ObjectId(id)}
-            const result = await productsCollection.findOne(query);
-            res.send(result)
-        })
+    //products api;
+      app.get("/products", async (req, res) => {
+          const email = req.query.email;
+          const query = {};
+          if (email) {
+            query.email= email
+          }
+      const cursor = productsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    app.get("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await productsCollection.findOne(query);
+      res.send(result);
+    });
 
-        app.post('/products', async (req, res) => {
-            const newProducts = req.body;
-            const result =  await productsCollection.insertOne(newProducts)
-            res.send({
-                message: 'product create Successful',
-                data: result,
-                success: true,
-              
-            })
-        })
+    app.post("/products", async (req, res) => {
+      const newProducts = req.body;
+      const result = await productsCollection.insertOne(newProducts);
+      res.send({
+        message: "product create Successful",
+        data: result,
+        success: true,
+      });
+    });
 
-
-
-
-        await client.db('admin').command({ ping: 1 })
-       console.log(
-         "Pinged your deployment. You successfully connected to MongoDB!"
-       ); 
-    } finally {
-        //you will be continue all time
-    }
-   
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
+  } finally {
+    //you will be continue all time
+  }
 }
-run().catch(console.dir)
+run().catch(console.dir);
 
 app.listen(port, () => {
   console.log(`Smart is running on ${port}`);
