@@ -26,31 +26,44 @@ app.get("/", (req, res) => {
 
 const smartDeals = client.db("Smart-Deals");
 const productsCollection = smartDeals.collection("products");
-const bidsCollection = smartDeals.collection('bids');
+const bidsCollection = smartDeals.collection("bids");
+const userCollection = smartDeals.collection("users");
 async function run() {
   try {
     await client.connect();
 
-      //all apis will be here for sometimes;
-      //bids api;
+    //all apis will be here for sometimes;
+    //users api;
+    app.post("/users", async (req, res) => {
+      const newUser = req.body;
+      const query = { email: newUser.email };
+      const existingEmail = await userCollection.findOne(query);
+      if (existingEmail) {
+        res.send({ message: "this email already exist", success: false });
+      } else {
+        const result = await userCollection.insertOne(newUser);
+        res.send(result);
+      }
+    });
 
-      app.post('/bids', async (req, res) => {
-          const newBids = req.body;
-          const result = await bidsCollection.insertOne(newBids);
-          res.send(result)
-      })
-      app.get('/bids', async (req, res) => {
-          const cursor = bidsCollection.find();
-          const result = await cursor.toArray();
-          res.send(result)
-        })
+    //bids api;
+    app.post("/bids", async (req, res) => {
+      const newBids = req.body;
+      const result = await bidsCollection.insertOne(newBids);
+      res.send(result);
+    });
+    app.get("/bids", async (req, res) => {
+      const cursor = bidsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     //products api;
-      app.get("/products", async (req, res) => {
-          const email = req.query.email;
-          const query = {};
-          if (email) {
-            query.email= email
-          }
+    app.get("/products", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
       const cursor = productsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
