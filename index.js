@@ -57,6 +57,28 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+    app.get("/myBids", async (req, res) => {
+      const email = req.query.email;
+      const query = { buyerEmail: email };
+      const cursor = bidsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.delete("/myBids/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bidsCollection.deleteOne(query);
+      res.send(result)
+    });
+    // bid for products
+    app.get("/bids/:productId", async (req, res) => {
+      const productId = req.params.productId;
+      const query = { productId: productId };
+      const cursor = bidsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     //products api;
     app.get("/products", async (req, res) => {
       const email = req.query.email;
@@ -65,6 +87,15 @@ async function run() {
         query.email = email;
       }
       const cursor = productsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/latest-products", async (req, res) => {
+      const cursor = productsCollection
+        .find()
+        .sort({ created_at: -1 })
+        .limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
