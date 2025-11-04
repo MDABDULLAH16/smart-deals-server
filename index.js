@@ -1,6 +1,10 @@
 import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
+import admin from "firebase-admin";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const serviceAccount = require("./smart-deals-firebase-admin.json");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -23,6 +27,32 @@ app.get("/", (req, res) => {
 });
 // smart - deals;
 // 2wcjFQhXHOtpycgB
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const verifyFirebaseToken = async (req, res, next) => {
+  // console.log("token", req.headers.authorization);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorize access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorize access" });
+  }
+  try {
+    const decodeToken = await admin.auth().verifyIdToken(token);
+    req.user = decodeToken;
+    // console.log('after decode',decodeToken);
+    
+     
+
+    next();
+  } catch (error) {
+    console.log(error);
+    res.status(401).send({ message: "invalid or expired token" });
+  }
+};
 
 const smartDeals = client.db("Smart-Deals");
 const productsCollection = smartDeals.collection("products");
@@ -33,6 +63,7 @@ async function run() {
     await client.connect();
 
     //all apis will be here for sometimes;
+
     //users api;
     app.post("/users", async (req, res) => {
       const newUser = req.body;
@@ -57,9 +88,12 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
-    app.get("/myBids", async (req, res) => {
+    app.get("/myBids",  async (req, res) => {
       const email = req.query.email;
-      const query = { buyerEmail: email };
+      const query = {};
+      if (email) {
+        query.buyer_email= email
+      }
       const cursor = bidsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
@@ -69,7 +103,7 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bidsCollection.deleteOne(query);
-      res.send(result)
+      res.send(result);
     });
     // bid for products
     app.get("/bids/:productId", async (req, res) => {
@@ -80,12 +114,17 @@ async function run() {
       res.send(result);
     });
     //products api;
-    app.get("/products", async (req, res) => {
+    app.get("/products",verifyFirebaseToken,   async (req, res) => {
+    
+      const user = req.user;
+      console.log({user});
+      
       const email = req.query.email;
-      const query = {};
+      const query = {}
       if (email) {
-        query.email = email;
+        query.email=email
       }
+
       const cursor = productsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
@@ -109,11 +148,7 @@ async function run() {
     app.post("/products", async (req, res) => {
       const newProducts = req.body;
       const result = await productsCollection.insertOne(newProducts);
-      res.send({
-        message: "product create Successful",
-        data: result,
-        success: true,
-      });
+      res.send(result);
     });
 
     await client.db("admin").command({ ping: 1 });
